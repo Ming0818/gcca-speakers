@@ -16,7 +16,7 @@ if __name__ == '__main__':
         if file.endswith('.mat'):
             data_locations.append(os.path.join(data_directory, file))
     
-    model = GeneralizedCCA(data_locations)
+    model = GeneralizedCCA(data_locations, 10)
     
     model.solve()
     
