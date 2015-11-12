@@ -6,7 +6,7 @@ Class for performing approximate regularized GCCA
 '''
 
 import numpy as np
-
+import scipy.io as sio
 
 class GeneralizedCCA:
     
@@ -33,8 +33,9 @@ class GeneralizedCCA:
         
         # Sequentially load data to scale up to large data sets
         
-        for data_location in data_locations:
+        for data_location in self.data_locations:
             # Load data for j-th view (X_j)
+            mat_contents = sio.loadmat(data_location)
             
             # Perform rank-m SVD of X_j which yields X_j = A_j*S_j*B_j^T
             
