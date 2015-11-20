@@ -10,17 +10,17 @@ import scipy.io as sio
 
 class GeneralizedCCA:
     
-    def __init__(self, data_locations, m_rank=0):
+    def __init__(self, training_data_per_view, m_rank=0):
         '''
         Constructor for GeneralizedCCA.
 
         Args:
-            data_locations (list<str>): Directories for each view's data
+            training_data_per_view (list<ndarray>): Training data for each view
             m_rank (int): How many principal components to keep. A value of 0
                 indicates that it should be full-rank. (Default 0)
         '''
         
-        self.data_locations = data_locations
+        self.training_data_per_view = training_data_per_view
         self.m_rank = m_rank
     
     def solve(self):
@@ -37,11 +37,8 @@ class GeneralizedCCA:
         
         # Sequentially load data to scale up to large data sets
         
-        for i in range(len(self.data_locations)):
-            # Load data for j-th view (X_j)
-            mat_contents = sio.loadmat(self.data_locations[i])
-            
-            X = mat_contents['MFCC'].transpose()
+        for i in range(len(self.training_data_per_view)):
+            X = self.training_data_per_view[i].transpose()
             
             # Perform rank-m SVD of X_j which yields X_j = A_j*S_j*B_j^T
             A,S,B = np.linalg.svd(X, full_matrices=False)
