@@ -1,3 +1,6 @@
+# Don't add data to repo
+data/
+
 # OSX
 .DS_Store
 .Trashes
