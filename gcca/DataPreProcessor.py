@@ -27,11 +27,14 @@ class DataPreProcessor:
     def process(self):
         vocabulary_per_view = list()
         mfcc_per_view = list()
+        labels_per_view = list()
         
         file_idx_contents = sio.loadmat(self.file_idx_location)
         file_blocks = file_idx_contents['files'][0]
         
-        for i in range(len(self.data_locations)):
+        number_of_views = len(self.data_locations)
+        
+        for i in range(number_of_views):
             # Load .mat files for each view
             data_contents = sio.loadmat(self.data_locations[i])
             
@@ -41,6 +44,7 @@ class DataPreProcessor:
             frame_locs = data_contents['frame_locs'][0]
             
             mfcc_per_view.append(data_contents['MFCC'])
+            labels_per_view.append(data_contents['Phones'][0])
             
             vocabulary = dict()
             
@@ -103,16 +107,18 @@ class DataPreProcessor:
         
         # Extract corresponding MFCC data and perform dynamic time warping
         training_data_per_view = list()
+        training_labels_per_view = list()
         
-        for i in range(len(mfcc_per_view)):
-            training_data = np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float)
-            training_data_per_view.append(training_data)
+        for i in range(number_of_views): # Initialize with empty arrays
+            training_data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
+            training_labels_per_view.append(np.array([]))
         
         for common_word in common_words:
             mfcc_list = list()
+            label_list = list()
             frame_size_dict = dict()
             
-            for i in range(len(mfcc_per_view)):
+            for i in range(number_of_views):
                 vocabulary = vocabulary_per_view[i]
                 word_loc = vocabulary[common_word]
                 
@@ -120,22 +126,26 @@ class DataPreProcessor:
                 mfcc = mfcc[:,word_loc[0]:word_loc[1]]
                 mfcc_list.append(mfcc)
                 
+                labels = labels_per_view[i]
+                label_list.append(labels[word_loc[0]:word_loc[1]])
+                
                 frame_size_dict[i] = np.shape(mfcc)[1]
                 
             sorted_indices = sorted(frame_size_dict, key=frame_size_dict.get, reverse=False)
             
             ref_mfcc_index = sorted_indices[int(len(sorted_indices) / 2)]
             
-            for i in range(len(mfcc_list)):
-                warped_matrix = self.warpTimeFrame(mfcc_list[i], mfcc_list[ref_mfcc_index])
-                training_data_per_view[i] = np.hstack((training_data_per_view[i], warped_matrix))
+            for i in range(number_of_views):
+                warped_data, warped_labels = self.warpTimeFrame(mfcc_list[i], mfcc_list[ref_mfcc_index], label_list[i])
+                training_data_per_view[i] = np.hstack((training_data_per_view[i], warped_data))
+                training_labels_per_view[i] = np.hstack((training_labels_per_view[i], warped_labels))
         
-        for i in range(len(training_data_per_view)):
+        for i in range(number_of_views):
             training_data_per_view[i] = self.center(training_data_per_view[i])
         
-        return training_data_per_view
+        return training_data_per_view, training_labels_per_view
     
-    def warpTimeFrame(self, warp_matrix, ref_matrix):
+    def warpTimeFrame(self, warp_matrix, ref_matrix, labels):
         '''
         Performs dynamic time warping
         
@@ -148,7 +158,7 @@ class DataPreProcessor:
         ref_matrix_cols = np.shape(ref_matrix)[1]
         
         if ref_matrix_cols == warp_matrix_cols:
-            return warp_matrix
+            return warp_matrix, labels
         
         d = np.ndarray(shape=(warp_matrix_cols, ref_matrix_cols), dtype=float)
         
@@ -185,7 +195,8 @@ class DataPreProcessor:
                 
                 g[i][j] = min_distance
                 
-        warped_matrix = np.ndarray(shape=(np.shape(warp_matrix)[0], ref_matrix_cols), dtype=float)
+        warped_data = np.ndarray(shape=(np.shape(warp_matrix)[0], ref_matrix_cols), dtype=float)
+        warped_labels = np.ndarray((ref_matrix_cols,), dtype=object)
         
         for j in range(1, ref_matrix_cols + 1):
             min_value = float("inf")
@@ -196,9 +207,10 @@ class DataPreProcessor:
                     min_value = g[i][j]
                     min_index = i - 1
                 
-            warped_matrix[:,j-1] = warp_matrix[:,min_index]
+            warped_data[:,j-1] = warp_matrix[:,min_index]
+            warped_labels[j-1] = labels[min_index]
             
-        return warped_matrix
+        return warped_data, warped_labels
 
     def center(self, data):
         '''
@@ -224,17 +236,17 @@ if __name__ == '__main__':
     
     processor = DataPreProcessor(None, None, None)
     
-    warped_matrix = processor.warpTimeFrame(B, A)
-    print warped_matrix
+    warped_data = processor.warpTimeFrame(B, A)
+    print warped_data
     
-    warped_matrix = processor.warpTimeFrame(A, B)
-    print warped_matrix
+    warped_data = processor.warpTimeFrame(A, B)
+    print warped_data
     
     A = np.array([[5, 3, 9, 7, 3]], np.float)
     B = np.array([[4, 7, 4]], np.float)
     
-    warped_matrix = processor.warpTimeFrame(B, A)
-    print warped_matrix
+    warped_data = processor.warpTimeFrame(B, A)
+    print warped_data
     
-    warped_matrix = processor.warpTimeFrame(A, B)
-    print warped_matrix
+    warped_data = processor.warpTimeFrame(A, B)
+    print warped_data

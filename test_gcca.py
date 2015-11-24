@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # Pre-process data to have equal number of observations (n) 
     data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
             file_blocks)
-    training_data_per_view = data_pre_processor.process()
+    training_data_per_view, training_labels_per_view = data_pre_processor.process()
     
     # Perform GCCA on processed data
     gcca_model = GeneralizedCCA(training_data_per_view, 10)
