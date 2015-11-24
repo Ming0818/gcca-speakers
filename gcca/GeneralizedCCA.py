@@ -35,8 +35,6 @@ class GeneralizedCCA:
         
         M = [] # matrix corresponding to M^tilde
         
-        # Sequentially load data to scale up to large data sets
-        
         for i in range(len(self.training_data_per_view)):
             X = self.training_data_per_view[i].transpose()
             
@@ -61,11 +59,11 @@ class GeneralizedCCA:
             if i == 0:
                 M = np.array([], dtype=np.double).reshape(N,0)
             
-            # Append to existing M^tilde (TODO: may need to use incremental update here, instead of storing full M)
+            # Append to existing M^tilde
             M = np.hstack((M, np.mat(A) * np.mat(T)))
         
-        # Perform SVD on M^tilde which yields G*S*V^T (TODO: use incremental PCA (Brand, 2002))
+        # Perform SVD on M^tilde which yields G*S*V^T
         G,S,V = np.linalg.svd(M, full_matrices=False)
         
-        # Finally, return matrix G which has been compute from above
+        # Finally, return matrix G which has been computed from above
         return G
