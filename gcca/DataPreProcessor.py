@@ -130,6 +130,9 @@ class DataPreProcessor:
                 warped_matrix = self.warpTimeFrame(mfcc_list[i], mfcc_list[ref_mfcc_index])
                 training_data_per_view[i] = np.hstack((training_data_per_view[i], warped_matrix))
         
+        for i in range(len(training_data_per_view)):
+            training_data_per_view[i] = self.center(training_data_per_view[i])
+        
         return training_data_per_view
     
     def warpTimeFrame(self, warp_matrix, ref_matrix):
@@ -196,6 +199,22 @@ class DataPreProcessor:
             warped_matrix[:,j-1] = warp_matrix[:,min_index]
             
         return warped_matrix
+
+    def center(self, data):
+        '''
+        Centers data to zero-mean.
+        Args:
+            data (numpy.ndarray): Data to center.
+        Returns:
+            numpy.ndarray, the normalized data.
+        '''
+
+        out = np.array(data, copy=True, dtype='float')
+
+        mean = np.mean(out, axis=1)
+        for x in out.T:
+            x -= mean
+        return out
         
 if __name__ == '__main__':
     # Test dynamic time warping
