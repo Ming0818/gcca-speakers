@@ -10,7 +10,7 @@ import scipy.io as sio
 
 class DataPreProcessor:
     
-    def __init__(self, data_locations, file_idx_location, blocks):
+    def __init__(self, data_locations, file_idx_location, blocks, is_training_data):
         '''
         Constructor for DataPreProcessor.
 
@@ -23,16 +23,20 @@ class DataPreProcessor:
         self.data_locations = data_locations
         self.file_idx_location = file_idx_location
         self.blocks = blocks
+        self.is_training_data = is_training_data
     
     def process(self):
         vocabulary_per_view = list()
         mfcc_per_view = list()
-        labels_per_view = list()
+        phones_per_view = list()
         
         file_idx_contents = sio.loadmat(self.file_idx_location)
         file_blocks = file_idx_contents['files'][0]
         
         number_of_views = len(self.data_locations)
+        
+        data_per_view = list()
+        labels_per_view = list()
         
         for i in range(number_of_views):
             # Load .mat files for each view
@@ -44,7 +48,10 @@ class DataPreProcessor:
             frame_locs = data_contents['frame_locs'][0]
             
             mfcc_per_view.append(data_contents['MFCC'])
-            labels_per_view.append(data_contents['Phones'][0])
+            phones_per_view.append(data_contents['Phones'][0])
+            
+            data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
+            labels_per_view.append(np.array([]))
             
             vocabulary = dict()
             
@@ -75,6 +82,11 @@ class DataPreProcessor:
                     if len(uttered_words) == 0:
                         continue
                     
+                    if self.is_training_data == False: # Data for tuning or testing does not require check for common words or time warp
+                        data_per_view[i] = np.hstack((data_per_view[i], mfcc_per_view[i][:,prev_frame_loc:frame_loc]))
+                        labels_per_view[i] = np.hstack((labels_per_view[i], phones_per_view[i][prev_frame_loc:frame_loc]))
+                        continue
+                    
                     current_word = uttered_words[0]
                     word_start_index = prev_frame_loc
                     word_end_index = prev_frame_loc
@@ -89,6 +101,11 @@ class DataPreProcessor:
                         word_end_index = word_end_index + 1
                     
             vocabulary_per_view.append(vocabulary)
+        
+        if self.is_training_data == False:
+            for i in range(number_of_views):
+                data_per_view[i] = self.center(data_per_view[i])
+            return data_per_view, labels_per_view
             
         # Find common words across views             
         common_words = []
@@ -106,12 +123,6 @@ class DataPreProcessor:
                 common_words.append(word)
         
         # Extract corresponding MFCC data and perform dynamic time warping
-        training_data_per_view = list()
-        training_labels_per_view = list()
-        
-        for i in range(number_of_views): # Initialize with empty arrays
-            training_data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
-            training_labels_per_view.append(np.array([]))
         
         for common_word in common_words:
             mfcc_list = list()
@@ -126,7 +137,7 @@ class DataPreProcessor:
                 mfcc = mfcc[:,word_loc[0]:word_loc[1]]
                 mfcc_list.append(mfcc)
                 
-                labels = labels_per_view[i]
+                labels = phones_per_view[i]
                 label_list.append(labels[word_loc[0]:word_loc[1]])
                 
                 frame_size_dict[i] = np.shape(mfcc)[1]
@@ -137,13 +148,13 @@ class DataPreProcessor:
             
             for i in range(number_of_views):
                 warped_data, warped_labels = self.warpTimeFrame(mfcc_list[i], mfcc_list[ref_mfcc_index], label_list[i])
-                training_data_per_view[i] = np.hstack((training_data_per_view[i], warped_data))
-                training_labels_per_view[i] = np.hstack((training_labels_per_view[i], warped_labels))
+                data_per_view[i] = np.hstack((data_per_view[i], warped_data))
+                labels_per_view[i] = np.hstack((labels_per_view[i], warped_labels))
         
         for i in range(number_of_views):
-            training_data_per_view[i] = self.center(training_data_per_view[i])
+            data_per_view[i] = self.center(data_per_view[i])
         
-        return training_data_per_view, training_labels_per_view
+        return data_per_view, labels_per_view
     
     def warpTimeFrame(self, warp_matrix, ref_matrix, labels):
         '''
