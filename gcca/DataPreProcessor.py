@@ -48,7 +48,7 @@ class DataPreProcessor:
             frame_locs = data_contents['frame_locs'][0]
             
             mfcc_per_view.append(data_contents['MFCC'])
-            phones_per_view.append(data_contents['Phones'][0])
+            phones_per_view.append(data_contents['P'][0])
             
             data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
             labels_per_view.append(np.array([]))
@@ -144,10 +144,10 @@ class DataPreProcessor:
                 
             sorted_indices = sorted(frame_size_dict, key=frame_size_dict.get, reverse=False)
             
-            ref_mfcc_index = sorted_indices[int(len(sorted_indices) / 2)]
+            ref_mfcc_index = sorted_indices[len(sorted_indices) - 1] # int(len(sorted_indices) / 2)
             
             for i in range(number_of_views):
-                warped_data, warped_labels = self.warpTimeFrame(mfcc_list[i], mfcc_list[ref_mfcc_index], label_list[i])
+                warped_data, warped_labels = self.warpTimeFrame(mfcc_list[i], label_list[i], label_list[ref_mfcc_index])
                 data_per_view[i] = np.hstack((data_per_view[i], warped_data))
                 labels_per_view[i] = np.hstack((labels_per_view[i], warped_labels))
         
@@ -156,7 +156,7 @@ class DataPreProcessor:
         
         return data_per_view, labels_per_view
     
-    def warpTimeFrame(self, warp_matrix, ref_matrix, labels):
+    def warpTimeFrame(self, data, labels, ref_labels):
         '''
         Performs dynamic time warping
         
@@ -165,30 +165,30 @@ class DataPreProcessor:
 
         '''
         
-        warp_matrix_cols = np.shape(warp_matrix)[1]
-        ref_matrix_cols = np.shape(ref_matrix)[1]
+        labels_cols = len(labels)
+        ref_labels_cols = len(ref_labels)
         
-        if ref_matrix_cols == warp_matrix_cols:
-            return warp_matrix, labels
+        if ref_labels_cols == labels_cols:
+            return data, labels
         
-        d = np.ndarray(shape=(warp_matrix_cols, ref_matrix_cols), dtype=float)
+        d = np.ndarray(shape=(labels_cols, ref_labels_cols), dtype=float)
         
-        for i in range(warp_matrix_cols):
-            for j in range(ref_matrix_cols):
-                feature_distances = warp_matrix[:, i] - ref_matrix[:, j]
-                d[i][j] = np.sqrt(np.sum(np.power(feature_distances, 2)))
+        for i in range(labels_cols):
+            for j in range(ref_labels_cols):
+                feature_distance = int(labels[i]) - int(ref_labels[j])
+                d[i][j] = np.sqrt(np.sum(np.power(feature_distance, 2)))
         
-        g = np.ndarray(shape=(warp_matrix_cols + 1, ref_matrix_cols + 1), dtype=float)
+        g = np.ndarray(shape=(labels_cols + 1, ref_labels_cols + 1), dtype=float)
         
-        for i in range(warp_matrix_cols + 1):
-            for j in range(ref_matrix_cols + 1):
+        for i in range(labels_cols + 1):
+            for j in range(ref_labels_cols + 1):
                 if i == 0 and j == 0:
                     g[i][j] = 2 * d[1][1]
                 else:
                     g[i][j] = float("inf")
         
-        for i in range(1, warp_matrix_cols + 1):
-            for j in range(1, ref_matrix_cols + 1):
+        for i in range(1, labels_cols + 1):
+            for j in range(1, ref_labels_cols + 1):
                 i_l = i - 1
                 j_l = j - 1
                 
@@ -206,19 +206,33 @@ class DataPreProcessor:
                 
                 g[i][j] = min_distance
                 
-        warped_data = np.ndarray(shape=(np.shape(warp_matrix)[0], ref_matrix_cols), dtype=float)
-        warped_labels = np.ndarray((ref_matrix_cols,), dtype=object)
+        warped_data = np.ndarray(shape=(np.shape(data)[0], ref_labels_cols), dtype=float)
+        warped_labels = np.ndarray((ref_labels_cols,), dtype=object)
         
-        for j in range(1, ref_matrix_cols + 1):
+        alpha = 0
+        prev_min_index = -1
+        
+        for j in range(1, ref_labels_cols + 1):
             min_value = float("inf")
             min_index = 0
                 
-            for i in range(1, warp_matrix_cols + 1):
+            for i in range(1, labels_cols + 1):
                 if g[i][j] < min_value:
                     min_value = g[i][j]
                     min_index = i - 1
-                
-            warped_data[:,j-1] = warp_matrix[:,min_index]
+            
+            original_min_index = min_index
+            
+            if min_index == prev_min_index:
+                if min_index + alpha + 1 < labels_cols and labels[min_index + alpha + 1] == labels[min_index]:
+                    alpha = alpha + 1
+                min_index = min_index + alpha
+            else:
+                alpha = 0
+            
+            prev_min_index = original_min_index
+            
+            warped_data[:,j-1] = data[:,min_index]
             warped_labels[j-1] = labels[min_index]
             
         return warped_data, warped_labels

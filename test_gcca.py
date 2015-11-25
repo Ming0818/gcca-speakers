@@ -40,7 +40,7 @@ if __name__ == '__main__':
     proj_matrix_per_view = list()
     
     training_data = np.ndarray(shape=(0, np.shape(G)[1]), dtype=np.float)
-    training_labels = np.array([])
+    training_labels = np.array([], dtype=np.int)
     
     # Compute U_j (matrix for projecting data into lower dimensional subspace)
     for i in range(number_of_views):
@@ -50,10 +50,10 @@ if __name__ == '__main__':
         
         labels = training_labels_per_view[i]
         for label in labels:
-            training_labels = np.hstack((training_labels, label[0]))
+            training_labels = np.hstack((training_labels, int(label)))
     
     # Fit k-NN model
-    knn_model = neighbors.KNeighborsClassifier(15, weights='uniform')
+    knn_model = neighbors.KNeighborsClassifier(5, weights='uniform')
     knn_model.fit(training_data, training_labels)
     
     # Start tuning
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         actual_labels = tuning_labels_per_view[i]
         
         for j in range(len(predicted_labels)):
-            if predicted_labels[j] == actual_labels[j][0]:
+            if int(predicted_labels[j]) == int(actual_labels[j]):
                 num_of_matches = num_of_matches + 1
             num_of_queries = num_of_queries + 1
     
