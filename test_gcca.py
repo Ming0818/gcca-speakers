@@ -5,6 +5,7 @@ Driver for performing generalized CCA on speech data
 
 from gcca import *
 from sklearn import neighbors
+from sklearn import svm
 from mpl_toolkits.mplot3d import Axes3D
 
 import matplotlib.pyplot as plt
@@ -12,6 +13,12 @@ import matplotlib.cm as cmx
 import matplotlib.colors as colors
 import numpy as np
 import os
+
+# "Enum" to specify different face detection data sets
+class ClassificationModel:
+    K_Neighbors = 'K Nearest Neighbors'
+    Kernel_SVM_RBF = 'Kernel SVM - RBF'
+    Kernel_SVM_Poly = 'Kernel SVM - Polynomial'
 
 def get_cmap(N):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
@@ -28,6 +35,7 @@ if __name__ == '__main__':
     num_of_neighbors = 5
     num_of_dimensions = 0 # 0 for full number of dimensions
     data_directory = 'data/speech/'
+    classification_model = ClassificationModel.K_Neighbors
     
     # Configure file locations
     data_locations = list()
@@ -96,8 +104,14 @@ if __name__ == '__main__':
     plt.show()
     
     # Fit k-NN model
-    knn_model = neighbors.KNeighborsClassifier(num_of_neighbors, weights='distance')
-    knn_model.fit(training_data, training_labels)
+    if classification_model == ClassificationModel.Kernel_SVM_RBF:
+        model = svm.SVC(decision_function_shape='ovo',kernel='rbf')
+    elif classification_model == ClassificationModel.Kernel_SVM_Poly:
+        model = svm.SVC(decision_function_shape='ovo',kernel='poly',degree=2,coef0=0)
+    else:
+        model = neighbors.KNeighborsClassifier(num_of_neighbors, weights='distance')
+    
+    model.fit(training_data, training_labels)
     
     # Start tuning
     data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
@@ -109,7 +123,7 @@ if __name__ == '__main__':
     
     for i in range(number_of_views):
         projected_data = np.mat(tuning_data_per_view[i].transpose()) * np.mat(proj_matrix_per_view[i])
-        predicted_labels = knn_model.predict(projected_data)
+        predicted_labels = model.predict(projected_data)
         actual_labels = tuning_labels_per_view[i]
         
         for j in range(len(predicted_labels)):
