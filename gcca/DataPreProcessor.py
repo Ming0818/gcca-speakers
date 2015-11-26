@@ -47,7 +47,7 @@ class DataPreProcessor:
             valid_files = data_contents['Valid_Files'][0]
             frame_locs = data_contents['frame_locs'][0]
             
-            mfcc_per_view.append(data_contents['MFCC'])
+            mfcc_per_view.append(data_contents['X'])
             phones_per_view.append(data_contents['P'][0])
             
             data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
@@ -129,9 +129,15 @@ class DataPreProcessor:
             label_list = list()
             frame_size_dict = dict()
             
+            is_valid_word = True
+            
             for i in range(number_of_views):
                 vocabulary = vocabulary_per_view[i]
                 word_loc = vocabulary[common_word]
+                
+                if word_loc[0] == word_loc[1]:
+                    is_valid_word = False
+                    break
                 
                 mfcc = mfcc_per_view[i]
                 mfcc = mfcc[:,word_loc[0]:word_loc[1]]
@@ -141,6 +147,9 @@ class DataPreProcessor:
                 label_list.append(labels[word_loc[0]:word_loc[1]])
                 
                 frame_size_dict[i] = np.shape(mfcc)[1]
+            
+            if is_valid_word == False:
+                continue
                 
             sorted_indices = sorted(frame_size_dict, key=frame_size_dict.get, reverse=False)
             
@@ -183,7 +192,7 @@ class DataPreProcessor:
         for i in range(labels_cols + 1):
             for j in range(ref_labels_cols + 1):
                 if i == 0 and j == 0:
-                    g[i][j] = 2 * d[1][1]
+                    g[i][j] = 2 * d[0][0]
                 else:
                     g[i][j] = float("inf")
         
@@ -256,22 +265,32 @@ class DataPreProcessor:
 if __name__ == '__main__':
     # Test dynamic time warping
     
-    A = np.array([[4, 1, 1, 1, 4]], np.float)
-    B = np.array([[4, 1, 4]], np.float)
+    A = np.array([4, 1, 1, 1, 4], np.float)
+    B = np.array([4, 1, 4], np.float)
+    C = np.array([[4, 1, 4]], np.float)
     
-    processor = DataPreProcessor(None, None, None)
+    processor = DataPreProcessor(None, None, None, True)
     
-    warped_data = processor.warpTimeFrame(B, A)
+    warped_data, warped_labels = processor.warpTimeFrame(C, B, A)
     print warped_data
     
-    warped_data = processor.warpTimeFrame(A, B)
+    A = np.array([4, 1, 1, 1, 4], np.float)
+    B = np.array([4, 1, 4], np.float)
+    C = np.array([[4, 1, 1, 1, 4]], np.float)
+    
+    warped_data, warped_labels = processor.warpTimeFrame(C, A, B)
     print warped_data
     
-    A = np.array([[5, 3, 9, 7, 3]], np.float)
-    B = np.array([[4, 7, 4]], np.float)
+    A = np.array([5, 3, 9, 7, 3], np.float)
+    B = np.array([4, 7, 4], np.float)
+    C = np.array([[4, 7, 4]], np.float)
     
-    warped_data = processor.warpTimeFrame(B, A)
+    warped_data, warped_labels = processor.warpTimeFrame(C, B, A)
     print warped_data
     
-    warped_data = processor.warpTimeFrame(A, B)
+    A = np.array([5, 3, 9, 7, 3], np.float)
+    B = np.array([4, 7, 4], np.float)
+    C = np.array([[5, 3, 9, 7, 3]], np.float)
+    
+    warped_data, warped_labels = processor.warpTimeFrame(C, A, B)
     print warped_data
