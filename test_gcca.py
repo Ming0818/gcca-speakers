@@ -25,8 +25,8 @@ def get_cmap(N):
 if __name__ == '__main__':
     # input parameters
     fold_number = 4
-    num_of_neighbors = 4
-    num_of_dimensions = 20
+    num_of_neighbors = 5
+    num_of_dimensions = 0 # 0 for full number of dimensions
     data_directory = 'data/speech/'
     
     # Configure file locations
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     training_data = np.ndarray(shape=(0, np.shape(G)[1]), dtype=np.float)
     training_labels = np.array([], dtype=np.int)
     
-    cmap = get_cmap(44)
+    cmap = get_cmap(38)
     colors = []
     
     # Compute U_j (matrix for projecting data into lower dimensional subspace)

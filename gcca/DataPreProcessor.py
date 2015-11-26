@@ -47,7 +47,7 @@ class DataPreProcessor:
             valid_files = data_contents['Valid_Files'][0]
             frame_locs = data_contents['frame_locs'][0]
             
-            mfcc_per_view.append(data_contents['X'])
+            mfcc_per_view.append(data_contents['MFCC'][117:156,:])
             phones_per_view.append(data_contents['P'][0])
             
             data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
@@ -68,7 +68,7 @@ class DataPreProcessor:
                 
                 # If valid, then add words (corresponding to this file) to vocabulary 
                 if is_valid_file:
-                    frame_loc = frame_locs[j] - 1 # convert to 0-based index
+                    frame_loc = frame_locs[j]
                     prev_frame_loc = 0
                     
                     if j > 0:
@@ -129,28 +129,19 @@ class DataPreProcessor:
             label_list = list()
             frame_size_dict = dict()
             
-            is_valid_word = True
-            
             for i in range(number_of_views):
                 vocabulary = vocabulary_per_view[i]
                 word_loc = vocabulary[common_word]
                 
-                if word_loc[0] == word_loc[1]:
-                    is_valid_word = False
-                    break
-                
                 mfcc = mfcc_per_view[i]
-                mfcc = mfcc[:,word_loc[0]:word_loc[1]]
+                mfcc = mfcc[:,word_loc[0]:word_loc[1]+1]
                 mfcc_list.append(mfcc)
                 
                 labels = phones_per_view[i]
-                label_list.append(labels[word_loc[0]:word_loc[1]])
+                label_list.append(labels[word_loc[0]:word_loc[1]+1])
                 
                 frame_size_dict[i] = np.shape(mfcc)[1]
             
-            if is_valid_word == False:
-                continue
-                
             sorted_indices = sorted(frame_size_dict, key=frame_size_dict.get, reverse=False)
             
             ref_mfcc_index = sorted_indices[len(sorted_indices) - 1] # int(len(sorted_indices) / 2)
