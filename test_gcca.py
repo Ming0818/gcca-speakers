@@ -73,7 +73,7 @@ def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_
         predicted_labels = model.predict(query_data)
 
         for j in range(len(predicted_labels)):
-            if int(predicted_labels[j]) == int(test_labels[j]):
+            if int(predicted_labels[j]) == int(query_labels[j]):
                 num_of_matches = num_of_matches + 1
                 num_of_matches_per_view = num_of_matches_per_view + 1
             num_of_queries = num_of_queries + 1
