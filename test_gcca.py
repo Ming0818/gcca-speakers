@@ -1,9 +1,14 @@
 '''
-Driver for performing generalized CCA on speech data
+test_gcca.py
+
+Driver for performing generalized CCA on speech data.
 
 '''
 
 from gcca import *
+import util
+from util import ClassificationModel
+
 from sklearn import neighbors
 from sklearn import svm
 from mpl_toolkits.mplot3d import Axes3D
@@ -18,24 +23,11 @@ import sys
 from __builtin__ import str
 
 
-# "Enum" to specify different face detection data sets
-class ClassificationModel:
-    K_Neighbors = 'K Nearest Neighbors'
-    Kernel_SVM_RBF = 'Kernel SVM - RBF'
-
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
 num_of_dimensions = 0 # 0 for full number of dimensions
 classification_model = ClassificationModel.Kernel_SVM_RBF
-use_full_phones = True
+use_full_phones = False
 
-def getColorMap(N):
-    '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct
-    RGB color.'''
-    color_norm  = colors.Normalize(vmin=0, vmax=N-1)
-    scalar_map = cmx.ScalarMappable(norm=color_norm, cmap='hsv')
-    def map_index_to_rgb_color(index):
-        return scalar_map.to_rgba(index)
-    return map_index_to_rgb_color
 
 def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_per_view):
     number_of_views = len(data_locations)
@@ -118,9 +110,9 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
     training_labels = np.array([], dtype=np.int)
 
     if use_full_phones:
-        cmap = getColorMap(38)
+        cmap = util.getColorMap(38)
     else:
-        cmap = getColorMap(len(vowel_labels))
+        cmap = util.getColorMap(len(vowel_labels))
 
     colors = []
 
@@ -190,28 +182,24 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
 
 if __name__ == '__main__':
 
-    data_directory = 'data/speech/'
+    data_directory = 'data/speech'
 
     # If provided a command-line argument, use that as the data location.
     if len(sys.argv) > 1:
         data_directory = sys.argv[1]
 
-    # Configure file locations
-    data_locations = list()
-    file_idx_location = None
+    data_locations, file_idx_location = util.find_file_locations(data_directory)
 
-    for file in os.listdir(data_directory):
-        if file.startswith('JW') and file.endswith('.mat'):
-            data_locations.append(os.path.join(data_directory, file))
-        if file.endswith('fileidx.mat'):
-            file_idx_location = os.path.join(data_directory, file)
-
-    data_locations.sort()
+    # Print info
+    print ('\n'
+           'Data Directory:       {}\n'
+           'Classification Model: {}\n'
+           'Number of Dimensions: {}\n'
+           'Using Full Phones:    {}\n'
+    ).format(data_directory, classification_model, num_of_dimensions,
+            use_full_phones)
 
     for fold_number in [1, 2, 3, 4, 5]:
         runSingleFold(data_locations, file_idx_location, fold_number)
-
-
-
 
 
