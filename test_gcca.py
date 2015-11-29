@@ -25,7 +25,7 @@ class ClassificationModel:
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
 num_of_dimensions = 0 # 0 for full number of dimensions
 classification_model = ClassificationModel.K_Neighbors
-use_full_phones = True
+use_full_phones = False
 
 def getColorMap(N):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
@@ -36,17 +36,22 @@ def getColorMap(N):
         return scalar_map.to_rgba(index)
     return map_index_to_rgb_color
 
-def getAccuracy(model, data_locations, file_idx_location, blocks, proj_matrix_per_view):
+def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_per_view):
     number_of_views = len(data_locations)
     
     data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
             blocks, False)
     data_per_view, labels_per_view = data_pre_processor.process()
     
+    accuracies = []
+    
     num_of_queries = 0
     num_of_matches = 0
     
     for i in range(number_of_views):
+        num_of_queries_per_view = 0
+        num_of_matches_per_view = 0
+        
         projected_data = np.mat(data_per_view[i].transpose()) * np.mat(proj_matrix_per_view[i])
         
         query_data = np.ndarray(shape=(0, np.shape(projected_data)[1]), dtype=np.float)
@@ -64,9 +69,15 @@ def getAccuracy(model, data_locations, file_idx_location, blocks, proj_matrix_pe
         for j in range(len(predicted_labels)):
             if int(predicted_labels[j]) == int(test_labels[j]):
                 num_of_matches = num_of_matches + 1
+                num_of_matches_per_view = num_of_matches_per_view + 1
             num_of_queries = num_of_queries + 1
+            num_of_queries_per_view = num_of_queries_per_view + 1
+        
+        accuracies.append(float(num_of_matches_per_view) / float(num_of_queries_per_view))
     
-    return float(num_of_matches) / float(num_of_queries)
+    accuracies.append(float(num_of_matches) / float(num_of_queries))
+    
+    return accuracies
 
 def runSingleFold(data_locations, file_idx_location, fold_number):
     print '| ---- ---- Fold #{} ---- ----'.format(fold_number)
@@ -137,19 +148,19 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
     # Start tuning/testing
     if classification_model == ClassificationModel.Kernel_SVM_RBF:
         model = svm.SVC(decision_function_shape='ovo',kernel='rbf')
-        print getAccuracy(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+        print getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
     elif classification_model == ClassificationModel.Kernel_SVM_Poly:
         model = svm.SVC(decision_function_shape='ovo',kernel='poly',degree=2,coef0=0)
-        print getAccuracy(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+        print getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
     else:
         max_accuracy = 0.0
         optimal_neighbors = 0
         for i in [4, 8, 12, 16]:
             model = neighbors.KNeighborsClassifier(i, weights='distance')
             model.fit(training_data, training_labels)
-            accuracy = getAccuracy(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
-            if accuracy > max_accuracy:
-                max_accuracy = accuracy
+            accuracies = getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+            if accuracies[len(accuracies) - 1] > max_accuracy:
+                max_accuracy = accuracies[len(accuracies) - 1]
                 optimal_neighbors = i
         
         print '| Optimal number of neighbors: {}'.format(optimal_neighbors)
@@ -157,11 +168,16 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
         model = neighbors.KNeighborsClassifier(optimal_neighbors, weights='distance')
     
     model.fit(training_data, training_labels)
-    accuracy = getAccuracy(model, data_locations, file_idx_location, testing_blocks, proj_matrix_per_view)
+    accuracies = getAccuracies(model, data_locations, file_idx_location, testing_blocks, proj_matrix_per_view)
     
-    print '| Accuracy on test data: {:.3f}'.format(accuracy)
+    for i in range(len(accuracies)):
+        if i < len(accuracies) - 1:
+            print '| Accuracy for view {}: {:.3f}'.format(i + 1, accuracies[i])
+        else:
+            print '| Accuracy for whole data: {:.3f}'.format(accuracies[i])
+    
     print '|'
-
+    
 if __name__ == '__main__':
     data_directory = '../data/speech/'
     
