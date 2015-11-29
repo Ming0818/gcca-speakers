@@ -46,21 +46,26 @@ def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_
         num_of_matches_per_view = 0
 
         projected_data = np.mat(data_per_view[i].transpose()) * np.mat(proj_matrix_per_view[i])
-
-        query_data = np.ndarray(shape=(0, np.shape(projected_data)[1]), dtype=np.float)
-        test_labels = np.array([], dtype=np.int)
-
         actual_labels = labels_per_view[i]
-
-        for j in range(len(actual_labels)):
-            if use_full_phones or (actual_labels[j] in vowel_labels):
-                query_data = np.vstack((query_data, projected_data[j,:]))
-                test_labels = np.hstack((test_labels, int(actual_labels[j])))
+        
+        query_data = np.ndarray(shape=(0, np.shape(projected_data)[1]), dtype=np.float)
+        query_labels = np.array([], dtype=np.int)
+        
+        if use_full_phones:
+            query_data = np.vstack((query_data, projected_data))
+            
+            for j in range(len(actual_labels)):
+                query_labels = np.hstack((query_labels, int(actual_labels[j])))
+        else:
+            for j in range(len(actual_labels)):
+                if (actual_labels[j] in vowel_labels):
+                    query_data = np.vstack((query_data, projected_data[j,:]))
+                    query_labels = np.hstack((query_labels, int(actual_labels[j])))
 
         predicted_labels = model.predict(query_data)
 
         for j in range(len(predicted_labels)):
-            if int(predicted_labels[j]) == int(test_labels[j]):
+            if int(predicted_labels[j]) == int(query_labels[j]):
                 num_of_matches = num_of_matches + 1
                 num_of_matches_per_view = num_of_matches_per_view + 1
             num_of_queries = num_of_queries + 1
@@ -125,17 +130,21 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
         proj_matrix_per_view.append(U)
 
         labels = training_labels_per_view[i]
-        for j in range(len(labels)):
-            if use_full_phones or (labels[j] in vowel_labels):
-                training_data = np.vstack((training_data, projected_data[j,:]))
+        
+        if use_full_phones:
+            training_data = np.vstack((training_data, projected_data))
+            
+            for j in range(len(labels)):
+                colors.append(cmap(int(labels[j])))
                 training_labels = np.hstack((training_labels, int(labels[j])))
-                if use_full_phones:
-                    colors.append(cmap(int(labels[j])))
-                else:
+        else:
+            for j in range(len(labels)):
+                if (labels[j] in vowel_labels):
+                    training_data = np.vstack((training_data, projected_data[j,:]))
+                    training_labels = np.hstack((training_labels, int(labels[j])))
                     colors.append(cmap(vowel_labels.index(int(labels[j]))))
 
     #plot = plt.scatter(training_data[:,2], training_data[:,1], color=colors)
-    #plt.legend([plot, plot, plot, plot, plot, plot, plot],['AA', 'AE', 'AO', 'EH', 'IY', 'OW', 'UW'])
     #plt.show()
 
     # Start tuning/testing
