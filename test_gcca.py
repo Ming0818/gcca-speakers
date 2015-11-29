@@ -54,7 +54,8 @@ def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_
         num_of_matches_per_view = 0
 
         projected_data = np.mat(data_per_view[i].transpose()) * np.mat(proj_matrix_per_view[i])
-
+        actual_labels = labels_per_view[i]
+        
         query_data = np.ndarray(shape=(0, np.shape(projected_data)[1]), dtype=np.float)
         query_labels = np.array([], dtype=np.int)
         
