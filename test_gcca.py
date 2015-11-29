@@ -20,12 +20,11 @@ from __builtin__ import str
 class ClassificationModel:
     K_Neighbors = 'K Nearest Neighbors'
     Kernel_SVM_RBF = 'Kernel SVM - RBF'
-    Kernel_SVM_Poly = 'Kernel SVM - Polynomial'
 
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
 num_of_dimensions = 0 # 0 for full number of dimensions
-classification_model = ClassificationModel.K_Neighbors
-use_full_phones = False
+classification_model = ClassificationModel.Kernel_SVM_RBF
+use_full_phones = True
 
 def getColorMap(N):
     '''Returns a function that maps each index in 0, 1, ... N-1 to a distinct 
@@ -147,11 +146,20 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
     
     # Start tuning/testing
     if classification_model == ClassificationModel.Kernel_SVM_RBF:
-        model = svm.SVC(decision_function_shape='ovo',kernel='rbf')
-        print getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
-    elif classification_model == ClassificationModel.Kernel_SVM_Poly:
-        model = svm.SVC(decision_function_shape='ovo',kernel='poly',degree=2,coef0=0)
-        print getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+        max_accuracy = 0.0
+        optimal_gamma = 0
+        
+        for i in [100, 200, 300, 400, 500]:
+            model = svm.SVC(decision_function_shape='ovr',kernel='rbf',gamma=i,C=1000)
+            model.fit(training_data, training_labels)
+            accuracies = getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+            if accuracies[len(accuracies) - 1] > max_accuracy:
+                max_accuracy = accuracies[len(accuracies) - 1]
+                optimal_gamma = i
+        
+        print '| Optimal gamma value: {}'.format(optimal_gamma)
+        
+        model = svm.SVC(decision_function_shape='ovr',kernel='rbf',gamma=optimal_gamma,C=1000)
     else:
         max_accuracy = 0.0
         optimal_neighbors = 0
