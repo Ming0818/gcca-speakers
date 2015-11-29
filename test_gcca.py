@@ -20,7 +20,6 @@ import numpy as np
 
 import os
 import sys
-from __builtin__ import str
 
 
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
@@ -81,23 +80,10 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
     print '| ---- ---- Fold #{} ---- ----'.format(fold_number)
 
     number_of_views = len(data_locations)
-    number_of_folds = 5
 
-    training_blocks = [0, 0, 0]
-    tuning_blocks = [0]
-    testing_blocks = [0]
-
-    # Configure blocks depending on fold
-    for i in range(number_of_folds):
-        block = fold_number - 1 + i
-        if block >= number_of_folds:
-            block = block % number_of_folds
-        if i <= 2:
-            training_blocks[i] = block + 1
-        elif i == 3:
-            tuning_blocks[0] = block + 1
-        else:
-            testing_blocks[0] = block + 1
+    ( training_blocks,
+      tuning_blocks,
+      testing_blocks ) = util.configure_blocks(fold_number)
 
     # Pre-process training data to have equal number of observations (n)
     data_pre_processor = DataPreProcessor(data_locations, file_idx_location,

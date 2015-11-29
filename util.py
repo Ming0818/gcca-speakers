@@ -17,6 +17,41 @@ class ClassificationModel:
     Kernel_SVM_RBF = 'Kernel SVM - RBF'
 
 
+def configure_blocks(fold_number, number_of_folds=5):
+    '''
+    Configure blocks depending on fold.
+
+    Args:
+        fold_number (int): The number of the fold to configure it for.
+    Args (optional):
+        number_of_folds (int): The total number of potential folds.
+    Returns:
+        list<int>, the blocks to be used for training.
+        list<int>, the blocks to be used for tuning.
+        list<int>, the blocks to be used for testing.
+    '''
+
+    number_of_folds = 5
+
+    training_blocks = [0, 0, 0]
+    tuning_blocks = [0]
+    testing_blocks = [0]
+
+    # Configure blocks depending on fold
+    for i in range(number_of_folds):
+        block = fold_number - 1 + i
+        if block >= number_of_folds:
+            block = block % number_of_folds
+        if i <= 2:
+            training_blocks[i] = block + 1
+        elif i == 3:
+            tuning_blocks[0] = block + 1
+        else:
+            testing_blocks[0] = block + 1
+
+    return training_blocks, tuning_blocks, testing_blocks
+
+
 def find_file_locations(data_directory):
     '''
     Finds data locations for the .mat files in a given directory.
