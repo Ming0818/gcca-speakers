@@ -84,7 +84,9 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
                 if (training_labels_per_view[i][j] in vowel_labels):
                     training_data = np.vstack((training_data, training_data_per_view[i].transpose()[j,:]))
                     training_labels = np.hstack((training_labels, int(training_labels_per_view[i][j])))
-
+        
+        param_msg = None
+        
         # Start tuning/testing
         if classification_model == ClassificationModel.Kernel_SVM_RBF:
             max_accuracy = 0.0
@@ -98,7 +100,7 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
                     max_accuracy = accuracy
                     optimal_gamma = j
 
-            print '| Optimal gamma value: {}'.format(optimal_gamma)
+            param_msg = 'Optimal gamma value: {}'.format(optimal_gamma)
 
             model = svm.SVC(decision_function_shape='ovo',kernel='rbf',gamma=optimal_gamma,C=2)
         else:
@@ -113,14 +115,14 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
                     max_accuracy = accuracy
                     optimal_neighbors = j
 
-            print '| Optimal number of neighbors: {}'.format(optimal_neighbors)
+            param_msg = 'Optimal number of neighbors: {}'.format(optimal_neighbors)
 
             model = neighbors.KNeighborsClassifier(optimal_neighbors, weights='distance')
 
         model.fit(training_data, training_labels)
         accuracy = getAccuracy(model, testing_data_per_view[i], testing_labels_per_view[i])
 
-        print '| Accuracy for view {}: {:.3f}'.format(i + 1, accuracy)
+        print '| Accuracy for view {}: {:.3f}'.format(i + 1, accuracy) + ', ' + param_msg
 
     print '|'
 
