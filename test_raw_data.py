@@ -36,9 +36,9 @@ def getAccuracy(model, data, labels):
         query_data = data.transpose()
         query_labels = labels
     else:
-        for j in range(len(actual_labels)):
-            if (actual_labels[j] in vowel_labels):
-                query_data = np.vstack((query_data, data[j,:]))
+        for j in range(len(labels)):
+            if (labels[j] in vowel_labels):
+                query_data = np.vstack((query_data, data.transpose()[j,:]))
                 query_labels = np.hstack((query_labels, int(labels[j])))
 
     predicted_labels = model.predict(query_data)
@@ -76,16 +76,14 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
         training_data = np.ndarray(shape=(0, np.shape(training_data_per_view[i])[0]), dtype=np.float)
         training_labels = np.array([], dtype=np.int)
             
-        labels = training_labels_per_view[i]
-        
         if use_full_phones:
             training_data = training_data_per_view[i].transpose()
-            training_labels = labels
+            training_labels = training_labels_per_view[i]
         else:
-            for j in range(len(labels)):
-                if (labels[j] in vowel_labels):
-                    training_data = np.vstack((training_data, projected_data[j,:]))
-                    training_labels = np.hstack((training_labels, int(labels[j])))
+            for j in range(len(training_labels_per_view[i])):
+                if (training_labels_per_view[i][j] in vowel_labels):
+                    training_data = np.vstack((training_data, training_data_per_view[i].transpose()[j,:]))
+                    training_labels = np.hstack((training_labels, int(training_labels_per_view[i][j])))
 
         # Start tuning/testing
         if classification_model == ClassificationModel.Kernel_SVM_RBF:
