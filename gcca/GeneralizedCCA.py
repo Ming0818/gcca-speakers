@@ -42,12 +42,6 @@ class GeneralizedCCA:
             A,S,B = np.linalg.svd(X, full_matrices=False)
             
             S = np.diag(S)
-
-            if self.m_rank != 0:
-                A = A[:,0:self.m_rank]
-            
-            if self.m_rank != 0:
-                S = S[:,0:self.m_rank]
                 
             N = np.shape(A)[0]
             m = np.shape(S)[0]
@@ -64,6 +58,9 @@ class GeneralizedCCA:
         
         # Perform SVD on M^tilde which yields G*S*V^T
         G,S,V = np.linalg.svd(M, full_matrices=False)
+        
+        if self.m_rank != 0:
+            G = G[:,0:self.m_rank]
         
         # Finally, return matrix G which has been computed from above
         return G

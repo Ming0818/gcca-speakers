@@ -47,7 +47,7 @@ class DataPreProcessor:
             valid_files = data_contents['Valid_Files'][0]
             frame_locs = data_contents['frame_locs'][0]
 
-            mfcc_per_view.append(data_contents['MFCC'][117:156,:])
+            mfcc_per_view.append(data_contents['MFCC'])
             phones_per_view.append(data_contents['P'][0])
 
             data_per_view.append(np.ndarray(shape=(np.shape(mfcc_per_view[i])[0], 0), dtype=np.float))
