@@ -18,14 +18,15 @@ import matplotlib.cm as cmx
 import matplotlib.colors as colors
 import numpy as np
 
+import scipy.io as sio
+
 import os
 import sys
 
 
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
-num_of_dimensions = 0 # 0 for full number of dimensions
 classification_model = ClassificationModel.Kernel_SVM_RBF
-use_full_phones = True
+use_full_phones = False
 
 
 def getAccuracy(model, data, labels):
@@ -51,24 +52,24 @@ def getAccuracy(model, data, labels):
 
     return float(num_of_matches) / float(len(predicted_labels))
 
-def runSingleFold(data_locations, file_idx_location, fold_number):
+def runSingleFold(data_list, file_idx, fold_number):
     print '| ---- ---- Fold #{} ---- ----'.format(fold_number)
 
-    number_of_views = len(data_locations)
+    number_of_views = len(data_list)
 
     ( training_blocks,
       tuning_blocks,
       testing_blocks ) = util.configure_blocks(fold_number)
 
-    data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
+    data_pre_processor = DataPreProcessor(data_list, file_idx,
             training_blocks, False)
     training_data_per_view, training_labels_per_view = data_pre_processor.process()
     
-    data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
+    data_pre_processor = DataPreProcessor(data_list, file_idx,
             tuning_blocks, False)
     tuning_data_per_view, tuning_labels_per_view = data_pre_processor.process()
     
-    data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
+    data_pre_processor = DataPreProcessor(data_list, file_idx,
             testing_blocks, False)
     testing_data_per_view, testing_labels_per_view = data_pre_processor.process()
 
@@ -135,17 +136,22 @@ if __name__ == '__main__':
         data_directory = sys.argv[1]
 
     data_locations, file_idx_location = util.find_file_locations(data_directory)
+    
+    data_list = list()
+    
+    for i in range(len(data_locations)):
+        data_list.append(sio.loadmat(data_locations[i]))
+    
+    file_idx = sio.loadmat(file_idx_location)
 
     # Print info
     print ('\n'
            'Data Directory:       {}\n'
            'Classification Model: {}\n'
-           'Number of Dimensions: {}\n'
            'Using Full Phones:    {}\n'
-    ).format(data_directory, classification_model, num_of_dimensions,
-            use_full_phones)
+    ).format(data_directory, classification_model, use_full_phones)
 
     for fold_number in [1, 2, 3, 4, 5]:
-        runSingleFold(data_locations, file_idx_location, fold_number)
+        runSingleFold(data_list, file_idx, fold_number)
 
 

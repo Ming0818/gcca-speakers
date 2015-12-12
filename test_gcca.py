@@ -18,20 +18,22 @@ import matplotlib.cm as cmx
 import matplotlib.colors as colors
 import numpy as np
 
+import scipy.io as sio
+
 import os
 import sys
 
 
 vowel_labels = [0, 1, 3, 10, 17, 24, 33]
-num_of_dimensions = 0 # 0 for full number of dimensions
+num_of_dimensions = 25 # 0 for full number of dimensions
 classification_model = ClassificationModel.Kernel_SVM_RBF
 use_full_phones = False
 
 
-def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_per_view):
-    number_of_views = len(data_locations)
+def getAccuracies(model, data_list, file_idx, blocks, proj_matrix_per_view):
+    number_of_views = len(data_list)
 
-    data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
+    data_pre_processor = DataPreProcessor(data_list, file_idx,
             blocks, False)
     data_per_view, labels_per_view = data_pre_processor.process()
 
@@ -76,7 +78,7 @@ def getAccuracies(model, data_locations, file_idx_location, blocks, proj_matrix_
 
     return accuracies
 
-def runSingleFold(data_locations, file_idx_location, fold_number):
+def runSingleFold(data_list, file_idx, fold_number):
     print '| ---- ---- Fold #{} ---- ----'.format(fold_number)
 
     number_of_views = len(data_locations)
@@ -86,7 +88,7 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
       testing_blocks ) = util.configure_blocks(fold_number)
 
     # Pre-process training data to have equal number of observations (n)
-    data_pre_processor = DataPreProcessor(data_locations, file_idx_location,
+    data_pre_processor = DataPreProcessor(data_list, file_idx,
             training_blocks, True)
     training_data_per_view, training_labels_per_view = data_pre_processor.process()
 
@@ -138,24 +140,24 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
         max_accuracy = 0.0
         optimal_gamma = 0
 
-        for i in [100, 200, 300, 400, 500]:
-            model = svm.SVC(decision_function_shape='ovr',kernel='rbf',gamma=i,C=1000)
+        for i in [500, 600, 700, 800, 900]:
+            model = svm.SVC(decision_function_shape='ovo',kernel='rbf',gamma=i,C=1000)
             model.fit(training_data, training_labels)
-            accuracies = getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+            accuracies = getAccuracies(model, data_list, file_idx, tuning_blocks, proj_matrix_per_view)
             if accuracies[len(accuracies) - 1] > max_accuracy:
                 max_accuracy = accuracies[len(accuracies) - 1]
                 optimal_gamma = i
 
         print '| Optimal gamma value: {}'.format(optimal_gamma)
 
-        model = svm.SVC(decision_function_shape='ovr',kernel='rbf',gamma=optimal_gamma,C=1000)
+        model = svm.SVC(decision_function_shape='ovo',kernel='rbf',gamma=optimal_gamma,C=1000)
     else:
         max_accuracy = 0.0
         optimal_neighbors = 0
         for i in [4, 8, 12, 16]:
             model = neighbors.KNeighborsClassifier(i, weights='distance')
             model.fit(training_data, training_labels)
-            accuracies = getAccuracies(model, data_locations, file_idx_location, tuning_blocks, proj_matrix_per_view)
+            accuracies = getAccuracies(model, data_list, file_idx, tuning_blocks, proj_matrix_per_view)
             if accuracies[len(accuracies) - 1] > max_accuracy:
                 max_accuracy = accuracies[len(accuracies) - 1]
                 optimal_neighbors = i
@@ -165,7 +167,7 @@ def runSingleFold(data_locations, file_idx_location, fold_number):
         model = neighbors.KNeighborsClassifier(optimal_neighbors, weights='distance')
 
     model.fit(training_data, training_labels)
-    accuracies = getAccuracies(model, data_locations, file_idx_location, testing_blocks, proj_matrix_per_view)
+    accuracies = getAccuracies(model, data_list, file_idx, testing_blocks, proj_matrix_per_view)
 
     for i in range(len(accuracies)):
         if i < len(accuracies) - 1:
@@ -184,6 +186,13 @@ if __name__ == '__main__':
         data_directory = sys.argv[1]
 
     data_locations, file_idx_location = util.find_file_locations(data_directory)
+    
+    data_list = list()
+    
+    for i in range(len(data_locations)):
+        data_list.append(sio.loadmat(data_locations[i]))
+        
+    file_idx = sio.loadmat(file_idx_location)
 
     # Print info
     print ('\n'
@@ -195,6 +204,6 @@ if __name__ == '__main__':
             use_full_phones)
 
     for fold_number in [1, 2, 3, 4, 5]:
-        runSingleFold(data_locations, file_idx_location, fold_number)
+        runSingleFold(data_list, file_idx, fold_number)
 
 

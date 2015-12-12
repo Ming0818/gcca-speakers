@@ -6,22 +6,21 @@ Class for pre-processing data for GCCA
 '''
 
 import numpy as np
-import scipy.io as sio
 
 class DataPreProcessor:
 
-    def __init__(self, data_locations, file_idx_location, blocks, is_training_data):
+    def __init__(self, data_list, file_idx, blocks, is_training_data):
         '''
         Constructor for DataPreProcessor.
 
         Args:
-            data_locations (list<str>): Directories for each view's data
+            data_list (list<str>): List of pre-loaded .mat data
             file_idx_location (str): Directory for file containing partitioning information
             blocks (int): Indices of file blocks to be used for training
         '''
 
-        self.data_locations = data_locations
-        self.file_idx_location = file_idx_location
+        self.data_list = data_list
+        self.file_idx = file_idx
         self.blocks = blocks
         self.is_training_data = is_training_data
 
@@ -30,17 +29,16 @@ class DataPreProcessor:
         mfcc_per_view = list()
         phones_per_view = list()
 
-        file_idx_contents = sio.loadmat(self.file_idx_location)
-        file_blocks = file_idx_contents['files'][0]
+        file_blocks = self.file_idx['files'][0]
 
-        number_of_views = len(self.data_locations)
+        number_of_views = len(self.data_list)
 
         data_per_view = list()
         labels_per_view = list()
 
         for i in range(number_of_views):
             # Load .mat files for each view
-            data_contents = sio.loadmat(self.data_locations[i])
+            data_contents = self.data_list[i]
 
             # Load relevant variables
             words = data_contents['Words'][0]
