@@ -1,9 +1,0 @@
-- How to check if GCCA is working?
-- Need to figure out how data is stored
-    - Potentially refactor DataPreProcessor? (it seems
-        like it's tossing out labels, which are needed
-        to to frame classification.
-- Use SVM from Scikit Learn
-    - http://scikit-learn.org/stable/modules/svm.html
-
-
